@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Multi-Screen Webcam</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .video-box {
+            border: 2px solid #000;
+            padding: 5px;
+            resize: both;
+            overflow: auto;
+            min-width: 100px;
+            min-height: 100px;
+            width: 320px;
+            height: 240px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .video-box-enhanced {
+            border: 2px solid #000;
+            padding: 5px;
+            resize: both;
+            overflow: auto;
+            min-width: 100px;
+            min-height: 100px;
+            width: 320px;
+            height: 240px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .lock-size {
+        resize: none; /* Disable resizing */
+        }
+        .tabs {
+            margin-bottom: 10px;
+        }
+        .tab {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            background-color: #ddd;
+            border-radius: 5px;
+        }
+        .tab.active {
+            background-color: #bbb;
+            font-weight: bold;
+        }
+        .tab-content {
+            gap: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+
+    </style>
+</head>
+<body>
+<h1>Webcam Feeds</h1>
+<!-- Tabs -->
+<div class="tabs">
+    <div class="tab" onclick="switchTab('enhanced')">Single Screen</div>
+    <div class="tab active" onclick="switchTab('normal')">Multiple Screens</div>
+</div>
+
+<!-- Multiple screens: bgr, gray and blue-->
+<div id="normal" class="tab-content active">
+    <button id="startBtn">Start Webcam</button>
+    <button id="stopBtn" disabled>Stop</button>
+    <button id="playCache" disabled>Play from Cache</button>
+    <span id="playCacheText" style="visibility:hidden;">
+        <h4 align="center" style="color:coral;">Playing from Cache</h4>
+        </span>
+    <div class="container">
+        <div class="video-box">
+            <h3>BGR Image</h3>
+            <img id="bgr_feed"/>
+        </div>
+        <div class="video-box">
+            <h3>Grayscale Image</h3>
+            <img id="gray_feed"/>
+        </div>
+        <div class="video-box">
+            <h3>Blue Channel Image</h3>
+            <img id="blue_feed"/>
+        </div>
+    </div>
+</div>
+
+<!-- Single Screen with slider -->
+<div id="enhanced" class="tab-content">
+    <button id="startBtnEnhanced">Start Webcam</button>
+    <button id="stopBtnEnhanced" disabled>Stop Webcam</button>
+    <div class="container">
+
+        <div class="video-box-enhanced">
+            <canvas id="videoCanvas" style="width:100%; height:100%"></canvas>
+
+        </div>
+    </div>
+    <label for="grayscaleSlider">Grayscale Intensity:</label>
+    <input type="range" id="grayscaleSlider" min="0" max="100" value="0">
+    <label for="channelSelect">Color Channel:</label>
+    <select id="channelSelect">
+        <option value="bgr">Default (BGR)</option>
+        <option value="red">Red Channel</option>
+        <option value="green">Green Channel</option>
+        <option value="blue">Blue Channel</option>
+    </select>
+</div>
+
+
+<script>
+        const canvas = document.getElementById("videoCanvas");
+        const ctx = canvas.getContext("2d");
+
+        function switchTab(tabName) {
+            document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
+            document.querySelectorAll(".tab-content").forEach(content => content.classList.remove("active"));
+            document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add("active");
+            document.getElementById(tabName).classList.add("active");
+        }
+        let ws = null;
+        document.getElementById("startBtn").addEventListener("click", function() {
+            if (ws == null){
+                ws = new WebSocket("ws://localhost:8000/ws");
+                document.getElementById("startBtn").disabled = true;
+                document.getElementById("stopBtn").disabled = false;
+                document.getElementById("playCache").disabled = true;
+                document.getElementById("playCacheText").style.visibility = 'hidden';
+
+                document.querySelectorAll(".video-box").forEach(item => {
+                    item.style.resize = "none";
+                })
+
+            }
+            ws.onmessage = function(event) {
+                let data = JSON.parse(event.data);
+                document.getElementById("bgr_feed").src = "data:image/jpeg;base64," + data.bgr;
+                document.getElementById("gray_feed").src = "data:image/jpeg;base64," + data.gray;
+                document.getElementById("blue_feed").src = "data:image/jpeg;base64," + data.blue;
+            };
+        });
+
+        document.getElementById("playCache").addEventListener("click", function() {
+
+            ws = new WebSocket("ws://localhost:8000/ws/cache");
+            document.getElementById("startBtn").disabled = true;
+            document.getElementById("stopBtn").disabled = false;
+            document.getElementById("playCache").disabled = true;
+            document.getElementById("playCacheText").style.visibility = 'visible';
+
+            document.querySelectorAll(".video-box").forEach(item => {
+                item.style.resize = "none";
+            })
+
+            ws.onmessage = function(event) {
+                let data = JSON.parse(event.data);
+                document.getElementById("bgr_feed").src = "data:image/jpeg;base64," + data.bgr;
+                document.getElementById("gray_feed").src = "data:image/jpeg;base64," + data.gray;
+                document.getElementById("blue_feed").src = "data:image/jpeg;base64," + data.blue;
+            };
+        });
+
+        document.getElementById("startBtnEnhanced").addEventListener("click", function() {
+            document.getElementById("playCacheText").style.visibility = 'hidden';
+
+            if (ws == null){
+                ws = new WebSocket("ws://localhost:8000/ws");
+                document.getElementById("startBtnEnhanced").disabled = true;
+                document.getElementById("stopBtnEnhanced").disabled = false;
+            }
+            ws.onmessage = function(event) {
+                const img = new Image();
+                let data = JSON.parse(event.data);
+                img.src = "data:image/jpeg;base64," + data.bgr;
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    applyEffects();
+                };
+            };
+        });
+
+        document.getElementById("stopBtn").addEventListener("click", function() {
+            document.getElementById("playCacheText").style.visibility = 'hidden';
+            if (ws !== null) {
+                ws.close();
+                ws = null;
+                document.getElementById("startBtn").disabled = false;
+                document.getElementById("stopBtn").disabled = true;
+                document.getElementById("playCache").disabled = false;
+
+            }
+        });
+
+        document.getElementById("stopBtnEnhanced").addEventListener("click", function() {
+            if (ws !== null) {
+                ws.close();
+                ws = null;
+                document.getElementById("startBtn").disabled = false;
+                document.getElementById("stopBtn").disabled = true;
+            }
+        });
+
+        function applyEffects() {
+            let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            let pixels = imgData.data;
+
+            let grayscaleIntensity = document.getElementById("grayscaleSlider").value / 100;
+            let channel = document.getElementById("channelSelect").value;
+
+            for (let i = 0; i < pixels.length; i += 4) {
+                let r = pixels[i];
+                let g = pixels[i + 1];
+                let b = pixels[i + 2];
+
+                let gray = r * 0.3 + g * 0.59 + b * 0.11;
+
+                pixels[i] = r * (1 - grayscaleIntensity) + gray * grayscaleIntensity;
+                pixels[i + 1] = g * (1 - grayscaleIntensity) + gray * grayscaleIntensity;
+                pixels[i + 2] = b * (1 - grayscaleIntensity) + gray * grayscaleIntensity;
+
+                if (channel === "red") {
+                    pixels[i + 1] = 0;
+                    pixels[i + 2] = 0;
+                } else if (channel === "green") {
+                    pixels[i] = 0;
+                    pixels[i + 2] = 0;
+                } else if (channel === "blue") {
+                    pixels[i] = 0;
+                    pixels[i + 1] = 0;
+                }
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        document.getElementById("grayscaleSlider").addEventListener("input", applyEffects);
+        document.getElementById("channelSelect").addEventListener("change", applyEffects);
+
+
+
+</script>
+</body>
+</html>

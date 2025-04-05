@@ -1,0 +1,18 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+fastapi = "0.115.12"
+uvicorn = "0.34.0"
+opencv-python = "4.11.0.86"
+websockets = "15.0.1"
+
+[dev-packages]
+flake8 = "7.2.0"
+black = "*"
+
+[requires]
+python_version = "3.9"
+python_full_version = "3.9.6"
