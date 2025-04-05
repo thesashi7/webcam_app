@@ -1,6 +1,6 @@
 # Setup Instructions
 - Install Pipenv if not already. For mac -> ```brew install pipenv```
-- Install dependecies -> ```pipenv install```
+- Install dependecies -> ```pipenv install``` (NOTE: This might take some time due to opencv installation)
 - Activate virtual env -> ```pipenv shell```
 - Run the App -> ```uvicorn main:app```
 - Go to -> ```http://localhost:8000/```
